@@ -1,1 +1,2 @@
+scenes/coffee-splash/bsdfs/ceramic.bsdf filter=lfs diff=lfs merge=lfs -text
 *.bsdf filter=lfs diff=lfs merge=lfs -text
