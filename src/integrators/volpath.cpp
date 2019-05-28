@@ -86,8 +86,8 @@ Spectrum VolPathIntegrator::Li(const RayDifferential &r, const Scene &scene,
 
             ++volumeInteractions;
             // Handle scattering at point in medium for volumetric path tracer
-            const Distribution1D *lightDistrib =
-                lightDistribution->Lookup(mi.p);
+            const Distribution1D *lightDistrib = lightDistribution->Lookup(mi.p);
+
             L += beta * UniformSampleOneLight(mi, scene, arena, sampler, true,
                                               lightDistrib);
 

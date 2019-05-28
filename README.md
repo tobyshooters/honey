@@ -3,18 +3,15 @@ Rendering honey for the CS 348B Image Synthesis Techniques rendering competition
 
 Project Proposal: <https://docs.google.com/document/d/1HRQ4KA_0sGYWmtsTPPh73sgxJwfz4TTRCKeK8VJGipA/edit?usp=sharing>
 
-Modeling Honey Comb:
-- [ ] Honeycomb geometry in Blender
-- [ ] Simulation of honey inside of comb, with bubbles
+Modeling:
+- [ ] Describe Honey material as volumetric media
+- [ ] Describe Wax material (BRDF, etc)
+- [ ] Choose environment lighting
 
-Physically-based Rendering:
-- [ ] Implement comb BRDF, likely simulated with wax
-- [ ] Implement honey BRDF
-
-Denoising:
-- [x] Read ML papers on denoising with convnets
-- [ ] Integrate to PBRT pipeline
+Rendering:
+- [ ] Extend SPPM for volumetric
+- [ ] Extend SPPM for photon beams
+- [ ] Implement Irradiance Caching
 
 Final Rendering:
 - [ ] Geometry of rest of scene
-- [ ] Possible generation of a GIF?
