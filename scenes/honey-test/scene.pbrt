@@ -3,7 +3,7 @@ LookAt 10 40 0
        5 0 -5
        -1 0 0
 
-Sampler "sobol" "integer pixelsamples" [16]
+Sampler "sobol" "integer pixelsamples" [256]
 
 Integrator "volpath" "integer maxdepth" [5]
 
