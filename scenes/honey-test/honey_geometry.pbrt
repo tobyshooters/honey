@@ -2,11 +2,17 @@
 # Scene bounds: (-1.320198, -1.800000, -20.599752) - (16.009295, 0.200000, 11.926766)
 
 
+MakeNamedMedium "honey" 
+    "string type" "homogeneous"
+    "rgb sigma_s" [ 0.00013612 0.00015836 0.000227 ]
+    "rgb sigma_a" [ 0.012957   0.023751   0.052184 ]
+
 # Name "honeyCube_Cube"
 AttributeBegin
 
 # Material
-Material "glass"
+Material "none"
+MediumInterface "" "honey"
 
 Shape "trianglemesh"
   "point3 P" [ 

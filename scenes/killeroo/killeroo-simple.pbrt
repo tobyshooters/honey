@@ -12,7 +12,9 @@ Film "image"
 
 Sampler "halton" "integer pixelsamples" [8]
 
-Integrator "path"
+Integrator "sppm" 
+    "integer photonsperiteration" 10000000
+    "integer iterations" 128
 
 WorldBegin
 

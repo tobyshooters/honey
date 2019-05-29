@@ -58,7 +58,7 @@
 #include "integrators/ao.h"
 #include "integrators/path.h"
 #include "integrators/sppm.h"
-#include "integrators/volsppm.h"
+#include "integrators/photon.h"
 #include "integrators/volpath.h"
 #include "integrators/whitted.h"
 #include "lights/diffuse.h"
@@ -1696,8 +1696,8 @@ Integrator *RenderOptions::MakeIntegrator() const {
         integrator = CreateAOIntegrator(IntegratorParams, sampler, camera);
     } else if (IntegratorName == "sppm") {
         integrator = CreateSPPMIntegrator(IntegratorParams, camera);
-    } else if (IntegratorName == "volsppm") {
-        integrator = CreateVolSPPMIntegrator(IntegratorParams, camera);
+    } else if (IntegratorName == "photon") {
+        integrator = CreatePhotonIntegrator(IntegratorParams, sampler, camera);
     } else {
         Error("Integrator \"%s\" unknown.", IntegratorName.c_str());
         return nullptr;

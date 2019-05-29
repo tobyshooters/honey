@@ -1,7 +1,7 @@
 
 LookAt -4.082462 -29.445557 7.488438 -3.408813 -21.135092 5.562232 0.307266 1.902535 5.352667
 
-Sampler "sobol" "integer pixelsamples" [64]
+Sampler "sobol" "integer pixelsamples" [32]
 
 Integrator "volpath" "integer maxdepth" [5]
 
@@ -12,7 +12,7 @@ Film "image"
 	"integer xresolution" [250]
 	"integer yresolution" [200]
         "float scale" 2
-        "string filename" "splash.exr"
+        "string filename" "splash_test.exr"
 
 WorldBegin
 

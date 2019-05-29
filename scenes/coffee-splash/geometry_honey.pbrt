@@ -96,7 +96,7 @@ Transform [5.689032077789307 0.000000000000000 0.000000000000000 0.0000000000000
 
 NamedMaterial "cafe"
 
-MediumInterface "" "liquid"
+MediumInterface "" "honey"
 
 Shape "plymesh"
 	"string filename" ["geometry/Cube_006_0000_m000.ply"]
