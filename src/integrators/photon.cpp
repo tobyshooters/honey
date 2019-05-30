@@ -14,6 +14,7 @@
 #include "accelerators/bvh.h"
 #include "lightdistrib.h"
 #include "primitive.h"
+#include "bssrdf.h"
 
 namespace pbrt {
 
@@ -105,6 +106,8 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
         /* Spectrum power = light->Power() / photonsPerIteration; */
 
         // TODO: use russian roulette
+        bool specularBounce = false;
+
         int bounces;
         for (bounces = 0;; ++bounces) {
             // Intersect _ray_ with scene and store intersection in _isect_
@@ -113,37 +116,91 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
 
             // Sample the participating medium, if present
             MediumInteraction mi;
+            // TODO: power check here
             if (photonRay.medium) beta *= photonRay.medium->Sample(photonRay, sampler, arena, &mi);
             if (beta.IsBlack()) break;
+
+            // IMPORTANT:
+            // ----------
+            // We store photon beams if they are inside of medium
+            // Outside of medium, indirect illumination is calculated per VolPath
+
+            // Store beam if on diffuse
+            if (bounces > 0) {
+                // Add to beam to primitives
+                // TODO: factor in power
+                // Break into many beams with length based on beamLength
+                float beamTime = beamLength / (photonRay.d.Length());
+                // TODO: how to loop to end of medium?
+                for (float startTime = 0; startTime < mi.time; startTime += beamTime) { 
+                    float endTime = std::min(startTime + beamTime, mi.time);
+                    beams.push_back(std::make_shared<Beam>(
+                                photonRay, startTime, endTime, /*power =*/ 0, initialSearchRadius));
+                }
+            }
 
             // Handle an interaction with a medium or a surface
             if (mi.IsValid()) {
                 // Terminate path if ray escaped or _maxDepth_ was reached
                 if (bounces >= maxDepth) break;
 
-                if (bounces > 0) {
-                    // Add to beam to primitives
-                    // TODO: factor in power
-                    // Break into many beams with length based on beamLength
-                    float beamTime = beamLength/(photonRay.d.Length());
-                    float startTime = 0;
-                    while (startTime < mi.time) { // TODO: how to loop to end of medium?
-                        float endTime = std::min(startTime + beamTime, mi.time);
-                        beams.push_back(std::make_shared<Beam>(
-                                    photonRay, startTime, endTime, /*power =*/ 0, initialSearchRadius));
-                        startTime += beamTime;
-                    }
-                }
-
                 Vector3f wo = -photonRay.d, wi; 
                 mi.phase->Sample_p(wo, &wi, sampler.Get2D());
                 photonRay = mi.SpawnRay(wi);
+                specularBounce = false;
             } else {
-                // Store beam if on diffuse
 
-                // Store beam through to other side of medium
-                // Continue propagating beam
+                // Terminate path if ray escaped or _maxDepth_ was reached
+                if (!foundIntersection || bounces >= maxDepth) break;
+
+                // Compute scattering functions and skip over medium boundaries
+                // Think this is a "None" material
+                isect.ComputeScatteringFunctions(photonRay, arena, true);
+                if (!isect.bsdf) {
+                    photonRay = isect.SpawnRay(photonRay.d);
+                    bounces--;
+                    continue;
+                }
+
+                // Sample BSDF to get new path direction
+                Vector3f wo = -photonRay.d, wi;
+                Float pdf;
+                BxDFType flags;
+                Spectrum f = isect.bsdf->Sample_f(wo, &wi, sampler.Get2D(), &pdf,
+                                                  BSDF_ALL, &flags);
+                if (f.IsBlack() || pdf == 0.f) break;
+
+                // TODO: attenuate power by BSDF
+                beta *= f * AbsDot(wi, isect.shading.n) / pdf;
+                DCHECK(std::isinf(beta.y()) == false);
+
+                specularBounce = (flags & BSDF_SPECULAR) != 0;
+                photonRay = isect.SpawnRay(wi);
+
+                // Account for attenuated subsurface scattering, if applicable
+                if (isect.bssrdf && (flags & BSDF_TRANSMISSION)) {
+                    // Importance sample the BSSRDF
+                    SurfaceInteraction pi;
+                    Spectrum S = isect.bssrdf->Sample_S(
+                            scene, sampler.Get1D(), sampler.Get2D(), arena, &pi, &pdf);
+                    DCHECK(std::isinf(beta.y()) == false);
+                    if (S.IsBlack() || pdf == 0) break;
+                    // TODO: attenuate power via BSSRDF
+                    beta *= S / pdf;
+
+                    // Account for the indirect subsurface scattering component
+                    Spectrum f = pi.bsdf->Sample_f(pi.wo, &wi, sampler.Get2D(),
+                            &pdf, BSDF_ALL, &flags);
+                    if (f.IsBlack() || pdf == 0) break;
+                    // TODO: attenuate power via BSSRDF
+                    beta *= f * AbsDot(wi, pi.shading.n) / pdf;
+                    DCHECK(std::isinf(beta.y()) == false);
+                    specularBounce = (flags & BSDF_SPECULAR) != 0;
+                    photonRay = pi.SpawnRay(wi);
+                }
             }
+
+            // TODO: terminate path by russian roulette
         }
     }
 
