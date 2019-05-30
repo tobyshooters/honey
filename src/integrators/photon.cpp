@@ -67,6 +67,9 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
     MemoryArena arena;
     std::vector<std::shared_ptr<Primitive>> beams;
 
+    // Declare a beam segment size to break the whole thing up into
+    float beamLength = 0.05f;
+
     for (int photonIndex = 0; photonIndex < photonsPerIteration; photonIndex++) {
         // Follow photon path for _photonIndex_
         int iter = 0;
@@ -120,17 +123,26 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
 
                 if (bounces > 0) {
                     // Add to beam to primitives
-                    // TODO: break into many beams
                     // TODO: factor in power
-                    beams.push_back(std::make_shared<Beam>(
-                                photonRay, 0, photonRay.tMax, /*power =*/ 0, initialSearchRadius));
+                    // Break into many beams with length based on beamLength
+                    float beamTime = beamLength/(photonRay.d.Length());
+                    float startTime = 0;
+                    while (startTime < mi.time) { // TODO: how to loop to end of medium?
+                        float endTime = std::min(startTime + beamTime, mi.time);
+                        beams.push_back(std::make_shared<Beam>(
+                                    photonRay, startTime, endTime, /*power =*/ 0, initialSearchRadius));
+                        startTime += beamTime;
+                    }
                 }
 
-                Vector3f wo = -photonRay.d, wi; mi.phase->Sample_p(wo, &wi, sampler.Get2D());
+                Vector3f wo = -photonRay.d, wi; 
+                mi.phase->Sample_p(wo, &wi, sampler.Get2D());
                 photonRay = mi.SpawnRay(wi);
             } else {
-
                 // Store beam if on diffuse
+
+                // Store beam through to other side of medium
+                // Continue propagating beam
             }
         }
     }
