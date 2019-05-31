@@ -20,6 +20,7 @@
 namespace pbrt {
 
 void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
+    Float beamRadius = initialSearchRadius;
     chooseLightDistribution = ComputeLightPowerDistribution(scene);
     // TODO: other distributions? Add to CreatePhotonIntegrator if need be
     sampleLightDistribution = CreateLightSampleDistribution("spatial", scene);
@@ -77,6 +78,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
             // TODO: power check here
             if (photonRay.medium) beta *= photonRay.medium->Sample(photonRay, sampler, arena, &mi);
             if (beta.IsBlack()) break;
+            photonRay.d = Normalize(photonRay.d);
 
             // IMPORTANT:
             // ----------
@@ -91,13 +93,13 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                 // TODO: factor in power
                 if (bounces > 0) {
                   // Break into many beams with length based on beamLength
-                  float beamTime = beamLength / (photonRay.d.Length());
+                  float beamTime = beamLength;
 
                   // TODO: If breaks, check if isect.time is correct
                   for (float startTime = 0; startTime < isect.time; startTime += beamTime) { 
                     float endTime = std::min(startTime + beamTime, isect.time);
                     beams.push_back(std::make_shared<Beam>(
-                          photonRay, startTime, endTime, /*power =*/ 0, initialSearchRadius));
+                          photonRay, startTime, endTime, /*power =*/ 0, beamRadius));
                   }
                 }
 
@@ -151,10 +153,16 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
     ProfilePhase p(Prof::SamplerIntegratorLi);
     Spectrum L(0.f), beta(1.f);
     RayDifferential ray(r);
+    Float beamRadius = initialSearchRadius;
+
     bool specularBounce = false;
     int bounces;
 
     for (bounces = 0;; ++bounces) {
+
+        // Just making sure...
+        ray.d = Normalize(ray.d);
+
         // Intersect _ray_ with scene and store intersection in _isect_
         SurfaceInteraction isect;
         bool foundIntersection = scene.Intersect(ray, &isect);
@@ -172,20 +180,22 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
             std::vector<BeamInteraction*> isects;
             bvh->AllIntersects(ray, isects);
 
-            float photonContribution;
+            // TODO: block usage of heterogeneous media
+            HomogeneousMedium* hm = (HomogeneousMedium*) ray.medium;
+            Spectrum photonContribution = Spectrum(0);
 
             // Do Ray x Beam (1D) intersection
             for (BeamInteraction* i : isects) {
 
-                // TODO: block usage of heterogeneous media
+                Float phase = PhaseHG(i->bi.cosTheta, hm->g);
+                Spectrum Tr_t = Exp(-hm->sigma_t * std::min(i->bi.t, MaxFloat));
+                Spectrum Tr_s = Exp(-hm->sigma_t * std::min(i->bi.s, MaxFloat));
 
-                HomogeneousMedium* hm = (HomogeneousMedium*) ray.medium;
-                Float phase = PhaseHG(i->bi.theta, hm->g);
-
-                /* Spectrum Tr = Exp(-sigma_t * std::min(t, MaxFloat) * ray.d.Length()); */
+                Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
+                photonContribution += photonThroughput * i->bi.power;
             }
 
-            L += beta * photonContribution;
+            L += beta * hm->sigma_s * (1 / beamRadius) * photonContribution;
             break;
         } else {
             // Handle scattering at point on surface for volumetric path tracer
