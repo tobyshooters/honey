@@ -167,7 +167,7 @@ class BeamInteraction : public SurfaceInteraction {
         Ray      r;
         float    s;
         float    t;
-        float    theta;
+        float    cosTheta;
         Spectrum power;
         float    radius;
     } bi;
