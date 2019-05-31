@@ -9,7 +9,10 @@ Film "image"
         "string filename" [ "caustic.exr" ] 
 
 # 16384
-Integrator "mlt" "integer mutationsperpixel" [ 1024 ] 
+Integrator "photon" 
+    "integer maxdepth"            [ 5 ]
+    "integer photonsperiteration" [ 10000 ]
+    "float   radius"              [ 0.1 ]
 
 MediumInterface "" "vol"
 
