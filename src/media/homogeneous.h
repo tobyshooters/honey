@@ -56,10 +56,11 @@ class HomogeneousMedium : public Medium {
     Spectrum Sample(const Ray &ray, Sampler &sampler, MemoryArena &arena,
                     MediumInteraction *mi) const;
 
-  private:
     // HomogeneousMedium Private Data
+    // Made public for Beam x Beam query interaction
     const Spectrum sigma_a, sigma_s, sigma_t;
     const Float g;
+
 };
 
 }  // namespace pbrt

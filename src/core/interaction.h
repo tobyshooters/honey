@@ -156,6 +156,23 @@ class SurfaceInteraction : public Interaction {
     int faceIndex = 0;
 };
 
+class BeamInteraction : public SurfaceInteraction {
+  public:
+    BeamInteraction()
+        : SurfaceInteraction(Point3f(), Vector3f(), Point2f(),
+                Vector3f(), Vector3f(), Vector3f(), Normal3f(), 
+                Normal3f(), 0, nullptr, 0) {}
+
+    struct {
+        Ray      r;
+        float    s;
+        float    t;
+        float    theta;
+        Spectrum power;
+        float    radius;
+    } bi;
+};
+
 }  // namespace pbrt
 
 #endif  // PBRT_CORE_INTERACTION_H

@@ -45,7 +45,8 @@ class PhotonIntegrator : public SamplerIntegrator {
     const int photonsPerIteration;
     const int writeFrequency;
 
-    std::unique_ptr<Distribution1D> lightDistribution;
+    std::unique_ptr<Distribution1D> chooseLightDistribution;
+    std::unique_ptr<LightDistribution> sampleLightDistribution;
     std::shared_ptr<BVHAccel> bvh;
 };
 

@@ -65,6 +65,7 @@ class BVHAccel : public Aggregate {
     ~BVHAccel();
     bool Intersect(const Ray &ray, SurfaceInteraction *isect) const;
     bool IntersectP(const Ray &ray) const;
+    bool AllIntersects(const Ray &ray, std::vector<BeamInteraction*> &isects) const;
 
   private:
     // BVHAccel Private Methods

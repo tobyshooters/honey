@@ -44,6 +44,7 @@
 #include "material.h"
 #include "medium.h"
 #include "transform.h"
+#include "interaction.h"
 
 namespace pbrt {
 
@@ -125,6 +126,59 @@ class Aggregate : public Primitive {
                                     MemoryArena &arena, TransportMode mode,
                                     bool allowMultipleLobes) const;
 };
+
+class Beam : public Primitive {
+    public:
+        Beam(Ray &r, Float tStart, Float tEnd, Spectrum power, Float radius)
+            : r(r), tStart(tStart), tEnd(tEnd), power(power), radius(radius) {}
+
+        // TODO: check if we need to be updating query.tMax to intersect
+        bool Intersect(const Ray& query, SurfaceInteraction* isect) const {
+            Vector3f v = Cross(r.d, query.d);
+
+            // Express origin and direction
+            Vector3f a = Vector3f(query.o);
+            Vector3f b = query.d;
+            Vector3f c = Vector3f(r.o);
+            Vector3f d = r.d;
+
+            // Solve quadratic
+            Float t = (Dot(b, d) * (Dot(c, d) - Dot(a, d)) - (Dot(b, c) * Dot(a, b))) 
+                / (Dot(b, d) * Dot(b ,d) - 1);
+
+            Float s = (Dot(b, d) * (Dot(a, d) - Dot(b, c)) - (Dot(a, d) * Dot(c, d))) 
+                / (Dot(b, d) * Dot(b ,d) - 1);
+
+            if (s < tStart || s > tEnd)
+                return false;
+            
+            Float dist = Distance(query(t), r(s));
+
+            // Abuse isect to store relevant information
+            if (isect) {
+                ((BeamInteraction*) isect)->bi = { 
+                  r, s, t, Dot(r.d, query.d), power, radius
+                };
+            }
+            // Return hit
+            return dist < radius;
+        }
+
+        // TODO: make sure this IntersectP does not need to do anything specific
+        bool IntersectP(const Ray& query) const { return Intersect(query, nullptr); }
+        Bounds3f WorldBound()             const { return Bounds3f(r(tStart), r(tEnd)); }
+        const AreaLight* GetAreaLight()   const { return nullptr; }
+        const Material* GetMaterial()     const { return nullptr; }
+        void ComputeScatteringFunctions(
+            SurfaceInteraction* i, MemoryArena& a, TransportMode m, bool b) const { return; }
+
+    private:
+        Ray r; // origin, direction, medium, tMax (set to end of medium)
+        Float tStart, tEnd;
+        Spectrum power;
+        Float radius;
+};
+
 
 }  // namespace pbrt
 
