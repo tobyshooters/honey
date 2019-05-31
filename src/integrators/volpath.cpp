@@ -122,8 +122,7 @@ Spectrum VolPathIntegrator::Li(const RayDifferential &r, const Scene &scene,
 
             // Sample illumination from lights to find attenuated path
             // contribution
-            const Distribution1D *lightDistrib =
-                lightDistribution->Lookup(isect.p);
+            const Distribution1D *lightDistrib = lightDistribution->Lookup(isect.p);
             L += beta * UniformSampleOneLight(isect, scene, arena, sampler,
                                               true, lightDistrib);
 
