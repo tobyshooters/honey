@@ -57,13 +57,11 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
         RayDifferential photonRay;
         Normal3f nLight;
         Float pdfPos, pdfDir;
-        Spectrum Le = light->Sample_Le(uLight0, uLight1, uLightTime, &photonRay,
-                &nLight, &pdfPos, &pdfDir);
+        Spectrum Le = light->Sample_Le(uLight0, uLight1, uLightTime, &photonRay, &nLight, &pdfPos, &pdfDir);
+
         if (pdfPos == 0 || pdfDir == 0 || Le.IsBlack()) return;
         Spectrum beta = (AbsDot(nLight, photonRay.d) * Le) / (lightPdf * pdfPos * pdfDir);
         if (beta.IsBlack()) return;
-
-        /* Spectrum power = light->Power() / photonsPerIteration; */
 
         bool specularBounce = false;
 
@@ -92,15 +90,16 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
 
                 // TODO: factor in power
                 if (bounces > 0) {
-                  // Break into many beams with length based on beamLength
-                  float beamTime = beamLength;
 
-                  // TODO: If breaks, check if isect.time is correct
-                  for (float startTime = 0; startTime < isect.time; startTime += beamTime) { 
-                    float endTime = std::min(startTime + beamTime, isect.time);
-                    beams.push_back(std::make_shared<Beam>(
-                          photonRay, startTime, endTime, /*power =*/ 0, beamRadius));
-                  }
+                    // Break into many beams with length based on beamLength
+                    float beamTime = beamLength;
+
+                    // TODO: If breaks, check if isect.time is correct
+                    for (float startTime = 0; startTime < isect.time; startTime += beamTime) { 
+                        float endTime = std::min(startTime + beamTime, isect.time);
+                        beams.push_back(std::make_shared<Beam>(
+                                    photonRay, startTime, endTime, /*power =*/ beta, beamRadius));
+                    }
                 }
 
                 Vector3f wo = -photonRay.d, wi; 
