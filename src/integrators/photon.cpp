@@ -17,6 +17,8 @@
 #include "bssrdf.h"
 #include "media/homogeneous.h"
 
+#define print(x) std::cout << x << std::endl;
+
 namespace pbrt {
 
 void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
@@ -28,10 +30,14 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
     MemoryArena arena;
     std::vector<std::shared_ptr<Primitive>> beams;
 
+    // Should have a separate sampler for this part
+    HaltonSampler preSampler(photonsPerIteration, camera->film->GetSampleBounds());  
+
     // Declare a beam segment size to break the whole thing up into
     float beamLength = 0.05f;
 
     for (int photonIndex = 0; photonIndex < photonsPerIteration; photonIndex++) {
+        print("Iteration " + std::to_string(photonIndex))
         // Follow photon path for _photonIndex_
         int iter = 0;
         uint64_t haltonIndex = (uint64_t)iter * (uint64_t)photonsPerIteration + photonIndex;
@@ -59,9 +65,9 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
         Float pdfPos, pdfDir;
         Spectrum Le = light->Sample_Le(uLight0, uLight1, uLightTime, &photonRay, &nLight, &pdfPos, &pdfDir);
 
-        if (pdfPos == 0 || pdfDir == 0 || Le.IsBlack()) return;
+        if (pdfPos == 0 || pdfDir == 0 || Le.IsBlack()) continue;
         Spectrum beta = (AbsDot(nLight, photonRay.d) * Le) / (lightPdf * pdfPos * pdfDir);
-        if (beta.IsBlack()) return;
+        if (beta.IsBlack()) continue;
 
         bool specularBounce = false;
 
@@ -74,7 +80,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
             // Sample the participating medium, if present
             MediumInteraction mi;
             // TODO: power check here
-            if (photonRay.medium) beta *= photonRay.medium->Sample(photonRay, sampler, arena, &mi);
+            if (photonRay.medium) beta *= photonRay.medium->Sample(photonRay, preSampler, arena, &mi);
             if (beta.IsBlack()) break;
             photonRay.d = Normalize(photonRay.d);
 
@@ -103,7 +109,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                 }
 
                 Vector3f wo = -photonRay.d, wi; 
-                mi.phase->Sample_p(wo, &wi, sampler.Get2D());
+                mi.phase->Sample_p(wo, &wi, preSampler.Get2D());
                 photonRay = mi.SpawnRay(wi);
                 specularBounce = false;
             } else {
@@ -124,7 +130,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                 Vector3f wo = -photonRay.d, wi;
                 Float pdf;
                 BxDFType flags;
-                Spectrum f = isect.bsdf->Sample_f(wo, &wi, sampler.Get2D(), &pdf,
+                Spectrum f = isect.bsdf->Sample_f(wo, &wi, preSampler.Get2D(), &pdf,
                                                   BSDF_ALL, &flags);
                 if (f.IsBlack() || pdf == 0.f) break;
 
@@ -141,6 +147,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
 
             // TODO: terminate path by russian roulette
         }
+        preSampler.StartNextSample();
     }
 
     bvh = std::make_shared<BVHAccel>(beams);
@@ -282,6 +289,7 @@ Integrator *CreatePhotonIntegrator(
         const ParamSet &params, std::shared_ptr<Sampler> sampler,
         std::shared_ptr<const Camera> camera)
 {
+    print(camera);
     int nIterations = params.FindOneInt("iterations", params.FindOneInt("numiterations", 64));
     int maxDepth = params.FindOneInt("maxdepth", 5);
     int photonsPerIter = params.FindOneInt("photonsperiteration", -1);

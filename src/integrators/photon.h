@@ -38,7 +38,7 @@ class PhotonIntegrator : public SamplerIntegrator {
                 Sampler &sampler, MemoryArena &arena, int depth) const;
 
   private:
-    std::shared_ptr<const Camera> camera;
+    // std::shared_ptr<const Camera> camera; // already in SamplerIntegrator
     const Float initialSearchRadius;
     const int nIterations;
     const int maxDepth;
