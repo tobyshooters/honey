@@ -37,7 +37,6 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
     float beamLength = 0.05f;
 
     for (int photonIndex = 0; photonIndex < photonsPerIteration; photonIndex++) {
-        print("Iteration " + std::to_string(photonIndex))
         // Follow photon path for _photonIndex_
         int iter = 0;
         uint64_t haltonIndex = (uint64_t)iter * (uint64_t)photonsPerIteration + photonIndex;
@@ -50,13 +49,9 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
         const std::shared_ptr<Light> &light = scene.lights[lightNum];
 
         // Compute sample values for photon ray leaving light source
-        Point2f uLight0(RadicalInverse(haltonDim,     haltonIndex),
-                RadicalInverse(haltonDim + 1, haltonIndex));
-        Point2f uLight1(RadicalInverse(haltonDim + 2, haltonIndex),
-                RadicalInverse(haltonDim + 3, haltonIndex));
-        Float uLightTime =
-            Lerp(RadicalInverse(haltonDim + 4, haltonIndex),
-                    camera->shutterOpen, camera->shutterClose);
+        Point2f uLight0(RadicalInverse(haltonDim,     haltonIndex), RadicalInverse(haltonDim + 1, haltonIndex));
+        Point2f uLight1(RadicalInverse(haltonDim + 2, haltonIndex), RadicalInverse(haltonDim + 3, haltonIndex));
+        Float uLightTime = Lerp(RadicalInverse(haltonDim + 4, haltonIndex), camera->shutterOpen, camera->shutterClose);
         haltonDim += 5;
 
         // Generate _photonRay_ from light source and initialize _beta_
@@ -79,7 +74,6 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
 
             // Sample the participating medium, if present
             MediumInteraction mi;
-            // TODO: power check here
             if (photonRay.medium) beta *= photonRay.medium->Sample(photonRay, preSampler, arena, &mi);
             if (beta.IsBlack()) break;
             photonRay.d = Normalize(photonRay.d);
@@ -94,7 +88,6 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                 // Terminate path if ray escaped or _maxDepth_ was reached
                 if (bounces >= maxDepth) break;
 
-                // TODO: factor in power
                 if (bounces > 0) {
 
                     // Break into many beams with length based on beamLength
@@ -134,7 +127,6 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                                                   BSDF_ALL, &flags);
                 if (f.IsBlack() || pdf == 0.f) break;
 
-                // TODO: attenuate power by BSDF
                 beta *= f * AbsDot(wi, isect.shading.n) / pdf;
                 DCHECK(std::isinf(beta.y()) == false);
 
@@ -164,24 +156,34 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
     bool specularBounce = false;
     int bounces;
 
+    //print("--------------------")
+
     for (bounces = 0;; ++bounces) {
 
         // Just making sure...
         ray.d = Normalize(ray.d);
 
+        //print("bounce: " + std::to_string(bounces))
+
         // Intersect _ray_ with scene and store intersection in _isect_
         SurfaceInteraction isect;
         bool foundIntersection = scene.Intersect(ray, &isect);
+
+        //print("intersected")
 
         // Sample the participating medium, if present
         MediumInteraction mi;
         if (ray.medium) beta *= ray.medium->Sample(ray, sampler, arena, &mi);
         if (beta.IsBlack()) break;
 
+        //print("sampled medium")
+
         // Handle an interaction with a medium or a surface
         if (mi.IsValid()) {
             // Terminate path if ray escaped or _maxDepth_ was reached
             if (bounces >= maxDepth) break;
+
+            //print("in medium")
 
             std::vector<BeamInteraction*> isects;
             bvh->AllIntersects(ray, isects);
@@ -193,6 +195,8 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
             // Do Ray x Beam (1D) intersection
             for (BeamInteraction* i : isects) {
 
+                //print("looping isects")
+
                 Float phase = PhaseHG(i->bi.cosTheta, hm->g);
                 Spectrum Tr_t = Exp(-hm->sigma_t * std::min(i->bi.t, MaxFloat));
                 Spectrum Tr_s = Exp(-hm->sigma_t * std::min(i->bi.s, MaxFloat));
@@ -201,10 +205,14 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
                 photonContribution += photonThroughput * i->bi.power;
             }
 
+            //print("found isects")
+
             L += beta * hm->sigma_s * (1 / beamRadius) * photonContribution;
             break;
+
         } else {
             // Handle scattering at point on surface for volumetric path tracer
+            //print("non-volumetric bounce")
 
             // Possibly add emitted light at intersection
             if (bounces == 0 || specularBounce) {
@@ -233,6 +241,8 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
             L += beta * UniformSampleOneLight(isect, scene, arena, sampler,
                                               true, lightDistrib);
 
+            //print("sampled direct lights")
+
             // Sample BSDF to get new path direction
             Vector3f wo = -ray.d, wi;
             Float pdf;
@@ -247,6 +257,9 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
 
             // Account for attenuated subsurface scattering, if applicable
             if (isect.bssrdf && (flags & BSDF_TRANSMISSION)) {
+
+                //print("sampled bssrdf")
+
                 // Importance sample the BSSRDF
                 SurfaceInteraction pi;
                 Spectrum S = isect.bssrdf->Sample_S(
@@ -274,6 +287,9 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
 
         // Possibly terminate the path with Russian roulette
         // Factor out radiance scaling due to refraction in rrBeta.
+
+        //print("russian roulette'd")
+
         float rrThreshold = 1.0;
         if (beta.MaxComponentValue() < rrThreshold && bounces > 3) {
             Float q = std::max((Float).05, 1 - beta.MaxComponentValue());
@@ -282,6 +298,7 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
             DCHECK(std::isinf(beta.y()) == false);
         }
     }
+    //print("calculated L")
     return L;
 }
 
@@ -289,7 +306,7 @@ Integrator *CreatePhotonIntegrator(
         const ParamSet &params, std::shared_ptr<Sampler> sampler,
         std::shared_ptr<const Camera> camera)
 {
-    print(camera);
+    //print(camera);
     int nIterations = params.FindOneInt("iterations", params.FindOneInt("numiterations", 64));
     int maxDepth = params.FindOneInt("maxdepth", 5);
     int photonsPerIter = params.FindOneInt("photonsperiteration", -1);
