@@ -86,7 +86,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
             // Handle an interaction with a medium or a surface
             if (mi.IsValid()) {
                 // Terminate path if ray escaped or _maxDepth_ was reached
-                if (bounces >= maxDepth) break;
+                if (bounces >= maxPhotonDepth) break;
 
                 if (bounces > 0) {
 
@@ -108,7 +108,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
             } else {
 
                 // Terminate path if ray escaped or _maxDepth_ was reached
-                if (!foundIntersection || bounces >= maxDepth) break;
+                if (!foundIntersection || bounces >= maxPhotonDepth) break;
 
                 // Compute scattering functions and skip over medium boundaries
                 // Think this is a "None" material
@@ -308,6 +308,7 @@ Integrator *CreatePhotonIntegrator(
 {
     //print(camera);
     int nIterations = params.FindOneInt("iterations", params.FindOneInt("numiterations", 64));
+    int maxPhotonDepth = params.FindOneInt("maxphotondepth", 5);
     int maxDepth = params.FindOneInt("maxdepth", 5);
     int photonsPerIter = params.FindOneInt("photonsperiteration", -1);
     int writeFreq = params.FindOneInt("imagewritefrequency", 1 << 31);
@@ -315,7 +316,7 @@ Integrator *CreatePhotonIntegrator(
     if (PbrtOptions.quickRender) nIterations = std::max(1, nIterations / 16);
 
     return new PhotonIntegrator(camera, sampler, nIterations, photonsPerIter,
-                                maxDepth, radius, writeFreq);
+                                maxDepth, maxPhotonDepth, radius, writeFreq);
 }
 
 }

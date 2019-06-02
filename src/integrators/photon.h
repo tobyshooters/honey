@@ -21,16 +21,19 @@ class PhotonIntegrator : public SamplerIntegrator {
   public:
     PhotonIntegrator(std::shared_ptr<const Camera> &camera, 
                      std::shared_ptr<Sampler> sampler,
-                     int nIterations, int photonsPerIteration, int maxDepth,
+                     int nIterations, int photonsPerIteration,
+                     int maxDepth, int maxPhotonDepth,
                      Float initialSearchRadius, int writeFrequency)
         : SamplerIntegrator(camera, sampler, camera->film->GetSampleBounds()),
           initialSearchRadius(initialSearchRadius),
           nIterations(nIterations),
           maxDepth(maxDepth),
+          maxPhotonDepth(maxPhotonDepth),
           photonsPerIteration(photonsPerIteration > 0
                               ? photonsPerIteration
                               : camera->film->croppedPixelBounds.Area()),
           writeFrequency(writeFrequency) {}
+
 
     void Preprocess(const Scene &scene, Sampler &sampler);
 
@@ -42,6 +45,7 @@ class PhotonIntegrator : public SamplerIntegrator {
     const Float initialSearchRadius;
     const int nIterations;
     const int maxDepth;
+    const int maxPhotonDepth;
     const int photonsPerIteration;
     const int writeFrequency;
 
