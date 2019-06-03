@@ -203,11 +203,46 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
 
                 Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
                 photonContribution += photonThroughput * i->bi.power;
+
+                delete i;
             }
 
             //print("found isects")
 
             L += beta * hm->sigma_s * (1 / beamRadius) * photonContribution;
+
+            // FINAL GATHERING
+            for (int fg = 0; fg < 10; fg ++) {
+
+                Vector3f wo = -ray.d, wi;
+                mi.phase->Sample_p(wo, &wi, sampler.Get2D());
+                Ray rayFg = mi.SpawnRay(wi);
+
+                MediumInteraction miFg;
+                if (ray.medium) beta *= ray.medium->Sample(ray, sampler, arena, &miFg);
+                if (beta.IsBlack()) break;
+
+                if (miFg.IsValid()) {
+                    std::vector<BeamInteraction*> isectsFg;
+                    bvh->AllIntersects(rayFg, isectsFg);
+
+                    HomogeneousMedium* hmFg = (HomogeneousMedium*) rayFg.medium;
+                    Spectrum photonFgContribution = Spectrum(0);
+
+                    for (BeamInteraction* i : isectsFg) {
+                        Float phase = PhaseHG(i->bi.cosTheta, hm->g);
+                        Spectrum Tr_t = Exp(-hmFg->sigma_t * std::min(i->bi.t, MaxFloat));
+                        Spectrum Tr_s = Exp(-hmFg->sigma_t * std::min(i->bi.s, MaxFloat));
+
+                        Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
+                        photonFgContribution += photonThroughput * i->bi.power;
+
+                        delete i;
+                    }
+                    L += beta * hmFg->sigma_s * (1 / beamRadius) * photonFgContribution;
+                }
+            }
+
             break;
 
         } else {
