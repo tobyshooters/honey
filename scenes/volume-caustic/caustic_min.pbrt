@@ -9,12 +9,12 @@ Film "image"
         "string filename" [ "caustic.exr" ] 
 
 # 16384
-Sampler "halton" "integer pixelsamples" [512]
+Sampler "halton" "integer pixelsamples" [32]
 
 Integrator "photon" 
     "integer maxdepth"            [ 5 ]
     "integer maxphotondepth"      [ 25 ]
-    "integer photonsperiteration" [ 1000000 ]
+    "integer photonsperiteration" [ 10000 ]
     "float   radius"              [ 0.001 ]
 
 #Integrator "mlt" "integer mutationsperpixel" [ 1024 ] 
