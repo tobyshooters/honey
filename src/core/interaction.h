@@ -159,8 +159,10 @@ class SurfaceInteraction : public Interaction {
 class BeamInteraction : public SurfaceInteraction {
   public:
     BeamInteraction()
-        : SurfaceInteraction(Point3f(), Vector3f(), Point2f(), Vector3f(1., 0., 0.), 
-                Vector3f(1., 0., 0.), Vector3f(0., 1., 0.), Normal3f(), Normal3f(),
+        : SurfaceInteraction(Point3f(1., 0., 0.), Vector3f(1., 0., 0.),
+                Point2f(1., 0.), Vector3f(1., 0., 0.), 
+                Vector3f(1., 0., 0.), Vector3f(0., 1., 0.),
+                Normal3f(0., 1., 0.), Normal3f(0., 1., 0.),
                 0, nullptr, 0) {}
 
     struct {
