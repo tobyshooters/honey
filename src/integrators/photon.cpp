@@ -200,7 +200,7 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
             L += beta * hm->sigma_s * (1 / beamRadius) * photonContribution;
 
             // FINAL GATHERING
-            for (int fg = 0; fg < 10; fg ++) {
+            for (int fg = 0; fg < finalGather; fg ++) {
                 Spectrum betaFg = beta;
 
                 Vector3f wo = -ray.d, wi;
@@ -326,12 +326,13 @@ Integrator *CreatePhotonIntegrator(
     int maxPhotonDepth = params.FindOneInt("maxphotondepth", 5);
     int maxDepth = params.FindOneInt("maxdepth", 5);
     int photonsPerIter = params.FindOneInt("photonsperiteration", -1);
+    int finalGather = params.FindOneInt("finalgather", 0);
     int writeFreq = params.FindOneInt("imagewritefrequency", 1 << 31);
     Float radius = params.FindOneFloat("radius", 1.f);
     if (PbrtOptions.quickRender) nIterations = std::max(1, nIterations / 16);
 
     return new PhotonIntegrator(camera, sampler, nIterations, photonsPerIter,
-                                maxDepth, maxPhotonDepth, radius, writeFreq);
+                                maxDepth, maxPhotonDepth, radius, writeFreq, finalGather);
 }
 
 }
