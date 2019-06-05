@@ -323,7 +323,7 @@ Integrator *CreatePhotonIntegrator(
         std::shared_ptr<const Camera> camera)
 {
     int nIterations = params.FindOneInt("iterations", params.FindOneInt("numiterations", 64));
-    int maxPhotonDepth = params.FindOneInt("maxphotondepth", 5);
+    int maxPhotonDepth = params.FindOneInt("maxphotondepth", 25);
     int maxDepth = params.FindOneInt("maxdepth", 5);
     int photonsPerIter = params.FindOneInt("photonsperiteration", -1);
     int finalGather = params.FindOneInt("finalgather", 0);
