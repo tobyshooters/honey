@@ -136,7 +136,6 @@ class Beam : public Primitive {
 
         // TODO: check if we need to be updating query.tMax to intersect
         bool Intersect(const Ray& query, SurfaceInteraction* isect) const {
-            Vector3f v = Cross(r.d, query.d);
 
             // Express origin and direction
             Vector3f a = Vector3f(query.o);
@@ -147,16 +146,10 @@ class Beam : public Primitive {
             // std::cout << "Beam length: " << Distance(r(tStart), r(tEnd)) << std::endl;
 
             // Solve quadratic
-            // Float t = (Dot(b, d) * (Dot(c, d) - Dot(a, d)) - (Dot(b, c) * Dot(a, b))) 
-            //     / (Dot(b, d) * Dot(b ,d) - 1);
-            Float t = (Dot(c - a, b) + (Dot(a - c, d)*Dot(b,d)))/(1 - (Dot(b,d)*Dot(b,d)));
-
-            // Float s = (Dot(b, d) * (Dot(a, d) - Dot(b, c)) - (Dot(a, d) * Dot(c, d))) 
-            //     / (Dot(b, d) * Dot(b ,d) - 1);
-            Float s = (-1.f*Dot(c - a, d) + (Dot(a - c, d)*Dot(b,d)))/(1 - (Dot(b,d)*Dot(b,d)));
+            Float t = (Dot(c - a, b) + (Dot(a - c, d) * Dot(b,d))) / (1 - (Dot(b,d) * Dot(b,d)));
+            Float s = (-1.f * Dot(c - a, d) + (Dot(a - c, d) * Dot(b,d))) / (1 - (Dot(b,d) * Dot(b,d)));
 
             if (s < tStart || s > tEnd) {
-                // std::cout << "Failure" << std::endl;
                 return false;
             }
             

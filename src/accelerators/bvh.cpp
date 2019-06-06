@@ -754,11 +754,14 @@ bool BVHAccel::AllIntersects(const Ray &ray, std::vector<BeamInteraction*> &isec
                 // Intersect ray with primitives in leaf BVH node
                 for (int i = 0; i < node->nPrimitives; ++i) {
                     // std::cout << "Got to leaf node" << std::endl;
-                    BeamInteraction *isect = new BeamInteraction;
+
+                    BeamInteraction* isect = (BeamInteraction*) malloc(sizeof(BeamInteraction));
                     if (primitives[node->primitivesOffset + i]->Intersect(ray, isect)) {
                         // std::cout << "Intersected!" << std::endl;
                         hit = true;
                         isects.push_back(isect);
+                    } else {
+                        free(isect);
                     }
                 }
                 if (toVisitOffset == 0) break;

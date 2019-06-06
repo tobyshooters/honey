@@ -145,6 +145,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
     }
 
     bvh = std::make_shared<BVHAccel>(beams);
+    beams.clear();
     print("Done")
 }
 
@@ -193,11 +194,11 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
                 Spectrum Tr_s = Exp(-hm->sigma_t * std::min(i->bi.s, MaxFloat));
 
                 Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
-                photonContribution += photonThroughput * i->bi.power;
+                photonContribution += photonThroughput * i->bi.power / photonsPerIteration;
                 // std::cout << "Beam power: " << i->bi.power << std::endl;
-
-                delete i;
             }
+            for (BeamInteraction* i : isects) free(i);
+            isects.clear();
             // std::cout << "Photon contribution: " << photonContribution << std::endl;
 
             L += beta * hm->sigma_s * (1 / beamRadius) * photonContribution;
@@ -227,10 +228,11 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
                         Spectrum Tr_s = Exp(-hmFg->sigma_t * std::min(i->bi.s, MaxFloat));
 
                         Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
-                        photonFgContribution += photonThroughput * i->bi.power;
-
-                        delete i;
+                        photonFgContribution += photonThroughput * i->bi.power / photonsPerIteration;
                     }
+                    for (BeamInteraction* i : isectsFg) free(i);
+                    isectsFg.clear();
+
                     L += betaFg * hmFg->sigma_s * (1 / beamRadius) * photonFgContribution;
                 }
             }
