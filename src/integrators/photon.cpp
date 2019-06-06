@@ -31,10 +31,10 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
     std::vector<std::shared_ptr<Primitive>> beams;
 
     // Should have a separate sampler for this part
-    HaltonSampler preSampler(photonsPerIteration, camera->film->GetSampleBounds());  
+    HaltonSampler preSampler(photonsPerIteration * maxPhotonDepth, camera->film->GetSampleBounds());  
 
     // Declare a beam segment size to break the whole thing up into
-    float beamLength = 0.05f;
+    float beamLength = beamRadius;
 
     print("Building photon beam datastructure")
     for (int photonIndex = 0; photonIndex < photonsPerIteration; photonIndex++) {
@@ -69,6 +69,8 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
 
         int bounces;
         for (bounces = 0;; ++bounces) {
+            preSampler.StartNextSample();
+            Spectrum oldBeta = beta;
             // Intersect _ray_ with scene and store intersection in _isect_
             SurfaceInteraction isect;
             bool foundIntersection = scene.Intersect(photonRay, &isect);
@@ -76,7 +78,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
             // Sample the participating medium, if present
             MediumInteraction mi;
             if (photonRay.medium) beta *= photonRay.medium->Sample(photonRay, preSampler, arena, &mi);
-            if (beta.IsBlack()) break;
+            if (oldBeta.IsBlack()) break;
             photonRay.d = Normalize(photonRay.d);
 
             // IMPORTANT:
@@ -98,7 +100,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                     for (float startTime = 0; startTime < isect.time; startTime += beamTime) { 
                         float endTime = std::min(startTime + beamTime, isect.time);
                         beams.push_back(std::make_shared<Beam>(
-                                    photonRay, startTime, endTime, /*power =*/ beta, beamRadius));
+                                    photonRay, startTime, endTime, /*power =*/ oldBeta, beamRadius));
                     }
                 }
 
@@ -140,7 +142,6 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
 
             // TODO: terminate path by russian roulette
         }
-        preSampler.StartNextSample();
     }
 
     bvh = std::make_shared<BVHAccel>(beams);
@@ -193,9 +194,11 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
 
                 Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
                 photonContribution += photonThroughput * i->bi.power;
+                // std::cout << "Beam power: " << i->bi.power << std::endl;
 
                 delete i;
             }
+            // std::cout << "Photon contribution: " << photonContribution << std::endl;
 
             L += beta * hm->sigma_s * (1 / beamRadius) * photonContribution;
 

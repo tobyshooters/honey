@@ -144,15 +144,21 @@ class Beam : public Primitive {
             Vector3f c = Vector3f(r.o);
             Vector3f d = r.d;
 
+            // std::cout << "Beam length: " << Distance(r(tStart), r(tEnd)) << std::endl;
+
             // Solve quadratic
-            Float t = (Dot(b, d) * (Dot(c, d) - Dot(a, d)) - (Dot(b, c) * Dot(a, b))) 
-                / (Dot(b, d) * Dot(b ,d) - 1);
+            // Float t = (Dot(b, d) * (Dot(c, d) - Dot(a, d)) - (Dot(b, c) * Dot(a, b))) 
+            //     / (Dot(b, d) * Dot(b ,d) - 1);
+            Float t = (Dot(c - a, b) + (Dot(a - c, d)*Dot(b,d)))/(1 - (Dot(b,d)*Dot(b,d)));
 
-            Float s = (Dot(b, d) * (Dot(a, d) - Dot(b, c)) - (Dot(a, d) * Dot(c, d))) 
-                / (Dot(b, d) * Dot(b ,d) - 1);
+            // Float s = (Dot(b, d) * (Dot(a, d) - Dot(b, c)) - (Dot(a, d) * Dot(c, d))) 
+            //     / (Dot(b, d) * Dot(b ,d) - 1);
+            Float s = (-1.f*Dot(c - a, d) + (Dot(a - c, d)*Dot(b,d)))/(1 - (Dot(b,d)*Dot(b,d)));
 
-            if (s < tStart || s > tEnd)
+            if (s < tStart || s > tEnd) {
+                // std::cout << "Failure" << std::endl;
                 return false;
+            }
             
             Float dist = Distance(query(t), r(s));
 
@@ -162,6 +168,7 @@ class Beam : public Primitive {
                   r, s, t, Dot(r.d, query.d), power, radius
                 };
             }
+            // std::cout << "Radius: " << radius << "Dist: " << dist << std::endl;
             // Return hit
             return dist < radius;
         }

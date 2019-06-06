@@ -14,8 +14,8 @@ Sampler "halton" "integer pixelsamples" [32]
 Integrator "photon" 
     "integer maxdepth"            [ 5 ]
     "integer maxphotondepth"      [ 25 ]
-    "integer photonsperiteration" [ 10000 ]
-    "float   radius"              [ 0.001 ]
+    "integer photonsperiteration" [ 10000000 ]
+    "float   radius"              [ 0.5 ]
 
 #Integrator "mlt" "integer mutationsperpixel" [ 1024 ] 
 #Integrator "volpath" "integer maxdepth" [5] 
