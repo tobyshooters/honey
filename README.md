@@ -1,17 +1,8 @@
 # Honey
 Rendering honey for the CS 348B Image Synthesis Techniques rendering competition
 
-Project Proposal: <https://docs.google.com/document/d/1HRQ4KA_0sGYWmtsTPPh73sgxJwfz4TTRCKeK8VJGipA/edit?usp=sharing>
-
-Modeling:
-- [ ] Describe Honey material as volumetric media
-- [ ] Describe Wax material (BRDF, etc)
-- [ ] Choose environment lighting
-
-Rendering:
-- [ ] Extend SPPM for volumetric
-- [ ] Extend SPPM for photon beams
-- [ ] Implement Irradiance Caching
-
-Final Rendering:
-- [ ] Geometry of rest of scene
+Relevant files:
+- `src/integrators/photon.cpp/h`: photon beam integration implementation
+- `src/accelerators/bvh.cpp`: bvh extension for phootn beam, AllIntersects implementation
+- `src/core/interaction.h`: BeamInteraction class extending Interaction
+- `src/core/primitive.h`: Beam with ray-beam intersection that can be stored in BVH
