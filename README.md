@@ -7,7 +7,7 @@ Relevant files:
 - `src/core/interaction.h`: BeamInteraction class extending Interaction
 - `src/core/primitive.h`: Beam with ray-beam intersection that can be stored in BVH
 
-Changes relevant source:
+Changes from PBRT:
 ```
  src/accelerators/bvh.cpp    |  49 ++++++++++...
  src/accelerators/bvh.h      |   1 +
