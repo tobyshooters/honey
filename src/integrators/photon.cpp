@@ -59,10 +59,13 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
         RayDifferential photonRay;
         Normal3f nLight;
         Float pdfPos, pdfDir;
-        Spectrum Le = light->Sample_Le(uLight0, uLight1, uLightTime, &photonRay, &nLight, &pdfPos, &pdfDir);
 
-        if (pdfPos == 0 || pdfDir == 0 || Le.IsBlack()) continue;
-        Spectrum beta = (AbsDot(nLight, photonRay.d) * Le) / (lightPdf * pdfPos * pdfDir);
+        // Power of each photon
+        Spectrum sampledLe = light->Sample_Le(uLight0, uLight1, uLightTime, &photonRay, &nLight, &pdfPos, &pdfDir);
+        Spectrum Phi = sampledLe / photonsPerIteration;
+
+        if (pdfPos == 0 || pdfDir == 0 || sampledLe.IsBlack()) continue;
+        Spectrum beta = (AbsDot(nLight, photonRay.d) * Phi) / (lightPdf * pdfPos * pdfDir);
         if (beta.IsBlack()) continue;
 
         bool specularBounce = false;
@@ -70,15 +73,18 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
         int bounces;
         for (bounces = 0;; ++bounces) {
             preSampler.StartNextSample();
-            Spectrum oldBeta = beta;
             // Intersect _ray_ with scene and store intersection in _isect_
             SurfaceInteraction isect;
             bool foundIntersection = scene.Intersect(photonRay, &isect);
 
             // Sample the participating medium, if present
             MediumInteraction mi;
-            if (photonRay.medium) beta *= photonRay.medium->Sample(photonRay, preSampler, arena, &mi);
-            if (oldBeta.IsBlack()) break;
+            Spectrum mediumPdf;
+            if (photonRay.medium)  {
+                mediumPdf = photonRay.medium->Sample(photonRay, preSampler, arena, &mi);
+                beta *= mediumPdf;
+            }
+            if (beta.IsBlack()) break;
             photonRay.d = Normalize(photonRay.d);
 
             // IMPORTANT:
@@ -100,7 +106,7 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                     for (float startTime = 0; startTime < isect.time; startTime += beamTime) { 
                         float endTime = std::min(startTime + beamTime, isect.time);
                         beams.push_back(std::make_shared<Beam>(
-                                    photonRay, startTime, endTime, /*power =*/ oldBeta, beamRadius));
+                                    photonRay, startTime, endTime, /*power =*/ beta, beamRadius));
                     }
                 }
 
@@ -108,6 +114,16 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                 mi.phase->Sample_p(wo, &wi, preSampler.Get2D());
                 photonRay = mi.SpawnRay(wi);
                 specularBounce = false;
+
+                // TODO: terminate path by russian roulette
+                /* if (bounces > 3) { */
+                /*     Float q = std::max((float) 0.05, 1 - mediumPdf.MaxComponentValue()); */
+                /*     if (std::rand() < q) break; */
+                /*     beta *= mediumPdf / (1 - q); */
+                /* } else { */
+                /*     beta *= mediumPdf; */
+                /* } */
+
             } else {
 
                 // Terminate path if ray escaped or _maxDepth_ was reached
@@ -139,8 +155,6 @@ void PhotonIntegrator::Preprocess(const Scene &scene, Sampler &sampler) {
                 // TODO: possibly consider incorporating BSSRDF for photon tracing
 
             }
-
-            // TODO: terminate path by russian roulette
         }
     }
 
@@ -194,7 +208,7 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
                 Spectrum Tr_s = Exp(-hm->sigma_t * std::min(i->bi.s, MaxFloat));
 
                 Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
-                photonContribution += photonThroughput * i->bi.power / photonsPerIteration;
+                photonContribution += photonThroughput * i->bi.power;
                 // std::cout << "Beam power: " << i->bi.power << std::endl;
             }
             for (BeamInteraction* i : isects) free(i);
@@ -228,7 +242,7 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
                         Spectrum Tr_s = Exp(-hmFg->sigma_t * std::min(i->bi.s, MaxFloat));
 
                         Spectrum photonThroughput = phase * Tr_t * Tr_s / std::sqrt(1 - (i->bi.cosTheta * i->bi.cosTheta));
-                        photonFgContribution += photonThroughput * i->bi.power / photonsPerIteration;
+                        photonFgContribution += photonThroughput * i->bi.power;
                     }
                     for (BeamInteraction* i : isectsFg) free(i);
                     isectsFg.clear();
@@ -291,8 +305,7 @@ Spectrum PhotonIntegrator::Li(const RayDifferential &r, const Scene &scene,
                 if (S.IsBlack() || pdf == 0) break;
                 beta *= S / pdf;
 
-                // Account for the attenuated direct subsurface scattering
-                // component
+                // Account for the attenuated direct subsurface scattering component
                 L += beta *
                      UniformSampleOneLight(pi, scene, arena, sampler, true,
                                            sampleLightDistribution->Lookup(pi.p));
